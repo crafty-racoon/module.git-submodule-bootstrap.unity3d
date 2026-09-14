@@ -1,0 +1,14 @@
+{
+  "name": "CraftyRacoon.GitSubmoduleBootstrap.Editor.Tests",
+  "rootNamespace": "CraftyRacoon.GitSubmoduleBootstrap.Editor.Tests",
+  "references": [
+    "CraftyRacoon.GitSubmoduleBootstrap.Editor"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "optionalUnityReferences": [
+    "TestAssemblies"
+  ],
+  "autoReferenced": false
+}

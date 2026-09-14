@@ -1,60 +1,54 @@
-# module.git-submodule-bootstrap.unity
+# Git Submodule Bootstrap
 
-Unity Editor integration that checks `git submodule status --recursive` once per
-Editor session and runs `git submodule update --init --recursive` only when a
-submodule is missing or differs from the adopting repository's gitlink. It keeps
-submodule versions under the adopting repository's control: it does not use
-`--remote`, rewrite `.gitmodules`, or move gitlinks.
+Unity Editor source module that safely synchronizes Git submodules to the
+adopting repository's recorded gitlinks when doing so cannot discard or hide
+local work.
 
-## Features
+This repository is currently intended for module integration only. Add it as a
+Git submodule at:
 
-- Non-blocking update after the Editor opens.
-- No update command or progress window when every submodule already matches.
-- Temporary progress window while missing or outdated submodules are processed.
-- One automatic attempt per Editor session, including across domain reloads.
-- Manual update at **Tools > Git Submodules > Update Now**.
-- Per-project, per-user automatic-update toggle at
-  **Tools > Git Submodules > Update on Project Open**.
-- Non-interactive authentication so a background update cannot stall the Editor.
-- Console diagnostics and an Asset Database refresh after success.
-- No execution in Unity batch mode or player builds.
-
-## Recommended installation
-
-Install a released Git tag through Unity Package Manager so this bootstrap
-package does not depend on the submodule operation that it performs:
-
-```json
-{
-  "dependencies": {
-    "com.crafty-racoon.git-submodule-bootstrap":
-      "https://github.com/crafty-racoon/module.git-submodule-bootstrap.unity.git#v0.2.0"
-  }
-}
+```text
+Assets/Modules/module.git-submodule-bootstrap.unity3d
 ```
 
-For active package development, the adopting repository may keep the checkout
-at `module/module.git-submodule-bootstrap.unity` and use a local dependency:
+## Fresh clones and the bootstrap boundary
 
-```json
-{
-  "dependencies": {
-    "com.crafty-racoon.git-submodule-bootstrap":
-      "file:../module/module.git-submodule-bootstrap.unity"
-  }
-}
+This module cannot initialize itself. Its scripts do not exist in a fresh
+working tree until Git checks out this submodule. Before opening Unity, use one
+of these commands:
+
+```bash
+git clone --recurse-submodules <repository-url>
 ```
 
-A missing local package cannot initialize itself. Clone development workspaces
-with their submodules, run the Git command before opening Unity, or use the
-released Git-tag installation for fresh-project bootstrap.
+or, from an existing clone:
 
-## Requirements and behavior
+```bash
+git submodule update --init Assets/Modules/module.git-submodule-bootstrap.unity3d
+```
+
+After this module is present, opening Unity performs one safety-checked startup
+sync for the remaining submodules.
+
+## Safety model
+
+- The adopting repository's indexed gitlink is the desired revision.
+- Exact matches are left untouched.
+- Missing submodules may be initialized.
+- A clean checkout may move forward when its current commit is proven to be an ancestor of the recorded gitlink.
+- Dirty, conflicted, ahead, diverged, and unknown states block the entire update.
+- No submodule is moved until every relevant submodule passes preflight.
+- Detached commits are never moved backward automatically, including commits without a branch, remote-tracking branch, or tag.
+- Local `.gitmodules` edits and staged parent gitlink changes block the update.
+- The updater never uses force, reset, clean, stash, rebase, or remote tracking.
+
+Automatic checks log an actionable warning when blocked. Manual checks at
+**Tools > Git Submodules > Update Now** use the same safety rules and show the
+full reason list. The per-project automatic check can be toggled at
+**Tools > Git Submodules > Update on Project Open**.
+
+## Requirements
 
 - Unity 6 or newer.
 - `git` must be available on the process `PATH` inherited by Unity.
-- Existing credential helpers may provide stored credentials, but the package
-  sets `GIT_TERMINAL_PROMPT=0` and `GCM_INTERACTIVE=Never` for automatic safety.
-- Submodule repository URLs and commits remain owned by the outer adopting
-  repository.
-
+- Existing credential helpers may provide stored credentials. Background Git commands disable terminal and credential-manager interaction.

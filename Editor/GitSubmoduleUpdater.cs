@@ -1,5 +1,4 @@
 using System;
-using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
 using UnityEditor;
@@ -17,9 +16,8 @@ namespace CraftyRacoon.GitSubmoduleBootstrap.Editor
         private const string SessionKey = "CraftyRacoon.GitSubmoduleBootstrap.StartupUpdateAttempted";
         private const string PreferencePrefix = "CraftyRacoon.GitSubmoduleBootstrap.AutoUpdate.";
         private const int MaximumLogLength = 12000;
-
-        private static Task<GitCommandResult> commandTask;
-        private static OperationPhase operationPhase;
+        private static Task<GitSubmodulePreflightResult> preflightTask;
+        private static Task<GitCommandResult> updateTask;
         private static string activeProjectRoot;
         private static bool activeRequestIsAutomatic;
         private static bool assetRefreshSuspended;
@@ -32,24 +30,16 @@ namespace CraftyRacoon.GitSubmoduleBootstrap.Editor
         }
 
         private static string ProjectRoot => Path.GetFullPath(Path.Combine(Application.dataPath, ".."));
-
         private static string GitModulesPath => Path.Combine(ProjectRoot, ".gitmodules");
-
         private static string GitMetadataPath => Path.Combine(ProjectRoot, ".git");
-
-        private static string AutoUpdatePreferenceKey =>
-            PreferencePrefix + Application.dataPath.Replace('\\', '/');
-
-        private static bool AutoUpdateEnabled =>
-            EditorPrefs.GetBool(AutoUpdatePreferenceKey, true);
-
-        private static bool IsGitWorkingTree =>
-            Directory.Exists(GitMetadataPath) || File.Exists(GitMetadataPath);
+        private static string AutoUpdatePreferenceKey => PreferencePrefix + Application.dataPath.Replace('\\', '/');
+        private static bool AutoUpdateEnabled => EditorPrefs.GetBool(AutoUpdatePreferenceKey, true);
+        private static bool IsGitWorkingTree => Directory.Exists(GitMetadataPath) || File.Exists(GitMetadataPath);
 
         private static void RunStartupUpdate()
         {
-            if (Application.isBatchMode || !AutoUpdateEnabled ||
-                SessionState.GetBool(SessionKey, false) || !File.Exists(GitModulesPath))
+            bool alreadyAttempted = SessionState.GetBool(SessionKey, false);
+            if (Application.isBatchMode || !AutoUpdateEnabled || alreadyAttempted || !File.Exists(GitModulesPath))
             {
                 return;
             }
@@ -67,16 +57,16 @@ namespace CraftyRacoon.GitSubmoduleBootstrap.Editor
         [MenuItem(UpdateMenuPath, true)]
         private static bool ValidateUpdateNow()
         {
-            return commandTask == null && File.Exists(GitModulesPath) && IsGitWorkingTree;
+            return preflightTask == null && updateTask == null && File.Exists(GitModulesPath) && IsGitWorkingTree;
         }
 
         [MenuItem(AutoUpdateMenuPath, priority = 2001)]
         private static void ToggleAutoUpdate()
         {
-            var enabled = !AutoUpdateEnabled;
+            bool enabled = !AutoUpdateEnabled;
             EditorPrefs.SetBool(AutoUpdatePreferenceKey, enabled);
             Menu.SetChecked(AutoUpdateMenuPath, enabled);
-            Debug.Log($"[Git Submodules] Update on project open {(enabled ? "enabled" : "disabled")}.");
+            Debug.Log("[Git Submodules] Update on project open " + (enabled ? "enabled." : "disabled."));
         }
 
         [MenuItem(AutoUpdateMenuPath, true)]
@@ -88,11 +78,11 @@ namespace CraftyRacoon.GitSubmoduleBootstrap.Editor
 
         private static void StartUpdate(bool automatic)
         {
-            if (commandTask != null)
+            if (preflightTask != null || updateTask != null)
             {
                 if (!automatic)
                 {
-                    Debug.Log("[Git Submodules] A check or update is already running.");
+                    Debug.Log("[Git Submodules] A safety check or update is already running.");
                 }
 
                 return;
@@ -102,7 +92,7 @@ namespace CraftyRacoon.GitSubmoduleBootstrap.Editor
             {
                 if (!automatic)
                 {
-                    Debug.LogWarning($"[Git Submodules] No .gitmodules file was found at {GitModulesPath}.");
+                    Debug.LogWarning("[Git Submodules] No .gitmodules file was found at " + GitModulesPath + ".");
                 }
 
                 return;
@@ -110,60 +100,51 @@ namespace CraftyRacoon.GitSubmoduleBootstrap.Editor
 
             if (!IsGitWorkingTree)
             {
-                Debug.LogWarning($"[Git Submodules] {ProjectRoot} is not a Git working tree; update skipped.");
+                Debug.LogWarning("[Git Submodules] " + ProjectRoot + " is not a Git working tree; update skipped.");
                 return;
             }
 
             activeProjectRoot = ProjectRoot;
             activeRequestIsAutomatic = automatic;
-            operationPhase = OperationPhase.Detecting;
-            commandTask = Task.Run(
-                () => ExecuteGit(activeProjectRoot, "submodule status --recursive"));
+            PreflightRequest request = new PreflightRequest(activeProjectRoot);
+            preflightTask = Task.Run(request.Execute);
             EditorApplication.update += PollOperation;
         }
 
         private static void PollOperation()
         {
-            if (commandTask == null || !commandTask.IsCompleted)
+            if (preflightTask != null && preflightTask.IsCompleted)
             {
+                GitSubmodulePreflightResult result = preflightTask.Result;
+                preflightTask = null;
+                CompletePreflight(result);
                 return;
             }
 
-            var completedPhase = operationPhase;
-            var result = commandTask.Result;
-            commandTask = null;
-
-            if (completedPhase == OperationPhase.Detecting)
+            if (updateTask != null && updateTask.IsCompleted)
             {
-                CompleteDetection(result);
-                return;
+                GitCommandResult result = updateTask.Result;
+                updateTask = null;
+                CompleteUpdate(result);
             }
-
-            CompleteUpdate(result);
         }
 
-        private static void CompleteDetection(GitCommandResult result)
+        private static void CompletePreflight(GitSubmodulePreflightResult result)
         {
-            var output = FormatOutput(result.StandardOutput, result.StandardError);
-            if (result.ExitCode != 0)
+            if (result.IsBlocked)
             {
-                Debug.LogError(
-                    $"[Git Submodules] Status check failed with exit code {result.ExitCode}." + output);
+                string message = result.BuildBlockedMessage();
+                Debug.LogWarning(message);
+                if (!activeRequestIsAutomatic)
+                {
+                    GitSubmoduleUpdateWindow.OpenBlocked(message);
+                }
+
                 FinishOperation();
                 return;
             }
 
-            var status = GitSubmoduleStatus.Parse(result.StandardOutput);
-            if (status.ConflictedCount > 0)
-            {
-                Debug.LogError(
-                    $"[Git Submodules] {status.ConflictedCount} submodule path(s) contain merge conflicts. " +
-                    "Resolve them before updating.");
-                FinishOperation();
-                return;
-            }
-
-            if (!status.RequiresUpdate)
+            if (!result.CanMutate)
             {
                 if (!activeRequestIsAutomatic)
                 {
@@ -174,89 +155,36 @@ namespace CraftyRacoon.GitSubmoduleBootstrap.Editor
                 return;
             }
 
-            Debug.Log(
-                $"[Git Submodules] Detected {status.MissingCount} uninitialized and " +
-                $"{status.OutdatedCount} outdated submodule path(s); starting update.");
-            progressWindow = GitSubmoduleUpdateWindow.Open(
-                status.MissingCount,
-                status.OutdatedCount);
+            Debug.Log("[Git Submodules] Preflight approved " + result.MissingCount + " missing and " + result.SafeForwardCount + " safe-forward submodule path(s); starting update.");
+            progressWindow = GitSubmoduleUpdateWindow.OpenProgress(result.MissingCount, result.SafeForwardCount);
             AssetDatabase.DisallowAutoRefresh();
             assetRefreshSuspended = true;
-
-            operationPhase = OperationPhase.Updating;
-            commandTask = Task.Run(
-                () => ExecuteGit(activeProjectRoot, "submodule update --init --recursive"));
+            UpdateRequest request = new UpdateRequest(activeProjectRoot);
+            updateTask = Task.Run(request.Execute);
         }
 
         private static void CompleteUpdate(GitCommandResult result)
         {
             CloseProgressWindow();
             ResumeAssetRefresh();
-
-            var output = FormatOutput(result.StandardOutput, result.StandardError);
+            string output = FormatOutput(result.StandardOutput, result.StandardError);
             if (result.ExitCode == 0)
             {
-                Debug.Log("[Git Submodules] Update completed successfully." + output);
+                Debug.Log("[Git Submodules] Safe update completed successfully." + output);
                 FinishOperation();
                 AssetDatabase.Refresh();
                 return;
             }
 
-            Debug.LogError(
-                $"[Git Submodules] Update failed with exit code {result.ExitCode}. " +
-                "Authenticate Git or run the command manually, then use Tools > Git Submodules > Update Now." +
-                output);
+            Debug.LogError("[Git Submodules] Update failed with exit code " + result.ExitCode + ". Authenticate Git or run the command manually, then use Tools > Git Submodules > Update Now." + output);
             FinishOperation();
-        }
-
-        private static GitCommandResult ExecuteGit(string projectRoot, string arguments)
-        {
-            try
-            {
-                var startInfo = new ProcessStartInfo
-                {
-                    FileName = "git",
-                    Arguments = arguments,
-                    WorkingDirectory = projectRoot,
-                    UseShellExecute = false,
-                    CreateNoWindow = true,
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true
-                };
-
-                // An automatic project-open hook must never wait for an interactive credential prompt.
-                startInfo.EnvironmentVariables["GIT_TERMINAL_PROMPT"] = "0";
-                startInfo.EnvironmentVariables["GCM_INTERACTIVE"] = "Never";
-
-                using (var process = new Process { StartInfo = startInfo })
-                {
-                    if (!process.Start())
-                    {
-                        return new GitCommandResult(-1, string.Empty, "Git failed to start.");
-                    }
-
-                    var standardOutput = process.StandardOutput.ReadToEndAsync();
-                    var standardError = process.StandardError.ReadToEndAsync();
-                    process.WaitForExit();
-                    Task.WaitAll(standardOutput, standardError);
-
-                    return new GitCommandResult(
-                        process.ExitCode,
-                        standardOutput.Result,
-                        standardError.Result);
-                }
-            }
-            catch (Exception exception)
-            {
-                return new GitCommandResult(-1, string.Empty, exception.ToString());
-            }
         }
 
         private static void FinishOperation()
         {
             EditorApplication.update -= PollOperation;
-            operationPhase = OperationPhase.Idle;
-            commandTask = null;
+            preflightTask = null;
+            updateTask = null;
             activeProjectRoot = null;
             activeRequestIsAutomatic = false;
             CloseProgressWindow();
@@ -293,11 +221,7 @@ namespace CraftyRacoon.GitSubmoduleBootstrap.Editor
 
         private static string FormatOutput(string standardOutput, string standardError)
         {
-            var output = string.Join(
-                Environment.NewLine,
-                new[] { standardOutput.Trim(), standardError.Trim() });
-            output = output.Trim();
-
+            string output = string.Join(Environment.NewLine, new[] { standardOutput.Trim(), standardError.Trim() }).Trim();
             if (string.IsNullOrEmpty(output))
             {
                 return string.Empty;
@@ -305,87 +229,41 @@ namespace CraftyRacoon.GitSubmoduleBootstrap.Editor
 
             if (output.Length > MaximumLogLength)
             {
-                output = output.Substring(0, MaximumLogLength) +
-                         Environment.NewLine + "[output truncated]";
+                output = output.Substring(0, MaximumLogLength) + Environment.NewLine + "[output truncated]";
             }
 
             return Environment.NewLine + output;
         }
 
-        private enum OperationPhase
+        private sealed class PreflightRequest
         {
-            Idle,
-            Detecting,
-            Updating
-        }
+            private readonly string projectRoot;
 
-        private sealed class GitCommandResult
-        {
-            public GitCommandResult(int exitCode, string standardOutput, string standardError)
+            internal PreflightRequest(string projectRoot)
             {
-                ExitCode = exitCode;
-                StandardOutput = standardOutput;
-                StandardError = standardError;
+                this.projectRoot = projectRoot;
             }
 
-            public int ExitCode { get; }
-
-            public string StandardOutput { get; }
-
-            public string StandardError { get; }
+            internal GitSubmodulePreflightResult Execute()
+            {
+                GitSubmodulePreflight preflight = new GitSubmodulePreflight(new GitCommandRunner());
+                return preflight.Analyze(projectRoot);
+            }
         }
 
-        internal readonly struct GitSubmoduleStatus
+        private sealed class UpdateRequest
         {
-            private GitSubmoduleStatus(int missingCount, int outdatedCount, int conflictedCount)
+            private readonly string projectRoot;
+
+            internal UpdateRequest(string projectRoot)
             {
-                MissingCount = missingCount;
-                OutdatedCount = outdatedCount;
-                ConflictedCount = conflictedCount;
+                this.projectRoot = projectRoot;
             }
 
-            public int MissingCount { get; }
-
-            public int OutdatedCount { get; }
-
-            public int ConflictedCount { get; }
-
-            public bool RequiresUpdate => MissingCount > 0 || OutdatedCount > 0;
-
-            public static GitSubmoduleStatus Parse(string output)
+            internal GitCommandResult Execute()
             {
-                var missingCount = 0;
-                var outdatedCount = 0;
-                var conflictedCount = 0;
-                var lines = output.Split(
-                    new[] { '\r', '\n' },
-                    StringSplitOptions.RemoveEmptyEntries);
-
-                foreach (var line in lines)
-                {
-                    if (line.Length == 0)
-                    {
-                        continue;
-                    }
-
-                    switch (line[0])
-                    {
-                        case '-':
-                            missingCount++;
-                            break;
-                        case '+':
-                            outdatedCount++;
-                            break;
-                        case 'U':
-                            conflictedCount++;
-                            break;
-                    }
-                }
-
-                return new GitSubmoduleStatus(
-                    missingCount,
-                    outdatedCount,
-                    conflictedCount);
+                GitCommandRunner runner = new GitCommandRunner();
+                return runner.Run(projectRoot, "submodule", "update", "--init", "--recursive");
             }
         }
     }

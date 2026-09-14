@@ -1,6 +1,17 @@
 # Changelog
 
-All notable changes to this package are documented in this file.
+All notable changes to this module are documented in this file.
+
+## [Unreleased]
+
+### Changed
+
+- Converted the repository from a UPM package to a Unity source module.
+- Replaced the ambiguous `Outdated` state with mismatch relation analysis.
+- Added all-or-nothing preflight protection for dirty, conflicted, ahead, diverged, unknown, staged-gitlink, and locally edited `.gitmodules` states.
+- Limited automatic mutation to missing submodules and proven clean forwards.
+- Made automatic and manual updates share the same safety checks.
+- Added diagnostics for unprotected detached commits.
 
 ## [0.2.0] - 2026-09-01
 
