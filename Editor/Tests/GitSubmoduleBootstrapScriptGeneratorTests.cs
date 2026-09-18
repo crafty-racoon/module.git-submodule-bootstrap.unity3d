@@ -31,6 +31,15 @@ namespace CraftyRacoon.GitSubmoduleBootstrap.Editor.Tests
         }
 
         [Test]
+        public void GeneratedScriptRefusesStagedSubmodulePointerChanges()
+        {
+            string script = GitSubmoduleBootstrapScriptGenerator.BuildScriptContent();
+            StringAssert.Contains("git diff --cached --quiet HEAD -- \"%%B\"", script);
+            StringAssert.Contains("Staged submodule pointer differs from the parent HEAD", script);
+            StringAssert.Contains("Commit or unstage the pointer change", script);
+        }
+
+        [Test]
         public void GeneratedScriptIsDeterministicAndUsesCrLf()
         {
             string first = GitSubmoduleBootstrapScriptGenerator.BuildScriptContent();
