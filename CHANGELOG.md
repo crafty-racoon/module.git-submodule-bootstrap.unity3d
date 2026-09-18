@@ -4,6 +4,11 @@ All notable changes to this module are documented in this file.
 
 ## [Unreleased]
 
+### Added
+
+- Added **Tools > Git Submodules > Generate Root Initialize Script** to create a deterministic `Initialize Submodules.cmd` in the adopting Unity project's root.
+- The generated script blocks active Unity projects, validates Git metadata, refuses mixed submodule states and locally edited `.gitmodules`, and recursively initializes fresh clones without force/reset/clean operations.
+
 ## [0.3.0] - 2026-09-18
 
 ### Changed
