@@ -37,7 +37,7 @@ namespace CraftyRacoon.GitSubmoduleBootstrap.Editor
                 "    goto :fail",
                 ")",
                 "",
-                "if not exist \".git\" ("
+                "if not exist \".git\" (",
                 "    echo [Git Submodules] ERROR: No .git metadata was found.",
                 "    echo Clone the repository before running this script.",
                 "    goto :fail",
@@ -48,7 +48,7 @@ namespace CraftyRacoon.GitSubmoduleBootstrap.Editor
                 "    goto :fail",
                 ")",
                 "",
-                "if exist \"" + unityProjectLockPath + "\" ("
+                "if exist \"" + unityProjectLockPath + "\" (",
                 "    where powershell.exe >nul 2>nul",
                 "    if errorlevel 1 (",
                 "        echo [Git Submodules] ERROR: PowerShell is required to verify the Unity project lock.",
