@@ -4,6 +4,14 @@ All notable changes to this module are documented in this file.
 
 ## [Unreleased]
 
+## [0.4.3] - 2026-09-18
+
+### Fixed
+
+- Root initialization now verifies every top-level submodule gitlink in the index still matches the parent repository `HEAD` before running `git submodule update --init --recursive`.
+- Staged submodule pointer changes now block initialization instead of allowing Git to initialize from the staged index pointer.
+
+
 ## [0.4.2] - 2026-09-18
 
 ### Fixed
