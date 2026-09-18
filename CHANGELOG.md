@@ -4,6 +4,14 @@ All notable changes to this module are documented in this file.
 
 ## [Unreleased]
 
+## [0.5.1] - 2026-09-18
+
+### Fixed
+
+- Root script now verifies `git.exe` is available before invoking Git commands.
+- Simplified nested Unity project lock paths so generated PowerShell checks use the repository-relative path verbatim.
+
+
 ## [0.5.0] - 2026-09-18
 
 ### Added
