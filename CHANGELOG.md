@@ -4,6 +4,15 @@ All notable changes to this module are documented in this file.
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-09-18
+
+### Changed
+
+- Simplified `Initialize Submodules.cmd` to a fresh-clone bootstrap only: resolve the Git root and run `git submodule update --init --recursive`.
+- Removed `.gitmodules`, staged gitlink, mixed-state, mismatch, Unity-lock, and post-status policy checks from the CMD. Those repository-state safety rules remain in the Unity `Update Now` / startup updater.
+- The generated CMD still writes to the adopting Git repository root, not the Unity project directory.
+
+
 ## [0.6.0] - 2026-09-18
 
 ### Added
