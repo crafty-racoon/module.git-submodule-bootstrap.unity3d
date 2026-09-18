@@ -77,7 +77,7 @@ This repository ships a generic `Initialize Submodules.cmd` at its own Git root,
 
 Use **Tools > Git Submodules > Generate Root Initialize Script** to generate or replace the same bootstrap at the adopting repository's Git root. The output location is always the resolved Git root, even when the Unity project lives in a nested directory such as `Repo/NarrativeRuntime/`.
 
-The generated script is intentionally small: it verifies Git is available, resolves the repository root, and runs `git submodule update --init --recursive`. Git itself reports checkout/authentication/conflict failures. More restrictive synchronization policy belongs to the Unity updater, not to the bootstrap script.
+The generated script is intentionally small: it verifies Git is available, resolves the repository root, asks Git for the actual `index.lock` path, refuses to run while that lock exists, and then runs `git submodule update --init --recursive`. This prevents the bootstrap from running against the transient index state of an unfinished clone, checkout, or Git LFS filter. Git itself reports checkout/authentication/conflict failures. More restrictive synchronization policy belongs to the Unity updater, not to the bootstrap script.
 
 ## Requirements
 

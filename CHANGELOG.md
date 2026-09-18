@@ -4,6 +4,14 @@ All notable changes to this module are documented in this file.
 
 ## [Unreleased]
 
+## [0.7.1] - 2026-09-18
+
+### Fixed
+
+- `Initialize Submodules.cmd` now resolves `index.lock` through Git and refuses to run while clone, checkout, Git LFS filtering, or another index-writing Git operation is still in progress.
+- The guard never deletes or repairs the lock; stale locks remain an explicit user/Git recovery decision.
+
+
 ## [0.7.0] - 2026-09-18
 
 ### Changed
