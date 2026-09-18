@@ -5,64 +5,38 @@ namespace CraftyRacoon.GitSubmoduleBootstrap.Editor.Tests
     internal sealed class GitSubmoduleBootstrapScriptGeneratorTests
     {
         [Test]
-        public void GeneratedScriptUsesStableRootRelativeBootstrap()
+        public void GeneratedScriptBootstrapsSubmodulesFromGitRoot()
         {
-            string script = GitSubmoduleBootstrapScriptGenerator.BuildScriptContent(".");
-            StringAssert.Contains("pushd \"%~dp0\"", script);
+            string script = GitSubmoduleBootstrapScriptGenerator.BuildScriptContent();
+            StringAssert.Contains("git rev-parse --show-toplevel", script);
+            StringAssert.Contains("cd /d \"%GIT_ROOT%\"", script);
             StringAssert.Contains("git submodule update --init --recursive", script);
-            StringAssert.Contains("git submodule status --recursive", script);
         }
 
         [Test]
-        public void GeneratedScriptBlocksAnOpenUnityProject()
+        public void GeneratedScriptDoesNotActAsGitStateManager()
         {
-            string script = GitSubmoduleBootstrapScriptGenerator.BuildScriptContent(".");
-            StringAssert.Contains("Temp\\UnityLockfile", script);
-            StringAssert.Contains("[System.IO.FileShare]::None", script);
-            StringAssert.Contains("Close Unity completely", script);
+            string script = GitSubmoduleBootstrapScriptGenerator.BuildScriptContent();
+            StringAssert.DoesNotContain("git diff", script);
+            StringAssert.DoesNotContain("git status", script);
+            StringAssert.DoesNotContain("git submodule status", script);
+            StringAssert.DoesNotContain("UnityLockfile", script);
+            StringAssert.DoesNotContain("powershell", script);
         }
 
         [Test]
-        public void GeneratedScriptRefusesMixedTopLevelState()
+        public void GeneratedScriptTreatsRepositoryWithoutSubmodulesAsSuccess()
         {
-            string script = GitSubmoduleBootstrapScriptGenerator.BuildScriptContent(".");
-            StringAssert.Contains("The repository has a mixed submodule state.", script);
-            StringAssert.Contains("findstr /b /c:\" \"", script);
-        }
-
-        [Test]
-        public void GeneratedScriptRejectsMismatchedInitializedSubmodulesBeforeNoOp()
-        {
-            string script = GitSubmoduleBootstrapScriptGenerator.BuildScriptContent(".");
-            int mismatchCheckIndex = script.IndexOf("findstr /b /c:\"+\" /c:\"U\"", System.StringComparison.Ordinal);
-            int noMissingIndex = script.IndexOf("No missing top-level submodules were found.", System.StringComparison.Ordinal);
-            Assert.That(mismatchCheckIndex, Is.GreaterThanOrEqualTo(0));
-            Assert.That(noMissingIndex, Is.GreaterThan(mismatchCheckIndex));
-        }
-
-        [Test]
-        public void GeneratedScriptRefusesStagedSubmodulePointerChanges()
-        {
-            string script = GitSubmoduleBootstrapScriptGenerator.BuildScriptContent(".");
-            StringAssert.Contains("git diff --cached --quiet HEAD -- \"%%B\"", script);
-            StringAssert.Contains("Staged submodule pointer differs from the parent HEAD", script);
-            StringAssert.Contains("Commit or unstage the pointer change", script);
-        }
-
-        [Test]
-        public void GeneratedScriptSupportsUnityProjectBelowRepositoryRoot()
-        {
-            string script = GitSubmoduleBootstrapScriptGenerator.BuildScriptContent("NarrativeRuntime");
-            StringAssert.Contains("NarrativeRuntime\\Temp\\UnityLockfile", script);
-            StringAssert.Contains("Repository root: %CD%", script);
-            StringAssert.DoesNotContain("ProjectSettings\\ProjectVersion.txt", script);
+            string script = GitSubmoduleBootstrapScriptGenerator.BuildScriptContent();
+            StringAssert.Contains("if not exist \".gitmodules\"", script);
+            StringAssert.Contains("No submodule initialization is required.", script);
         }
 
         [Test]
         public void GeneratedScriptIsDeterministicAndUsesCrLf()
         {
-            string first = GitSubmoduleBootstrapScriptGenerator.BuildScriptContent(".");
-            string second = GitSubmoduleBootstrapScriptGenerator.BuildScriptContent(".");
+            string first = GitSubmoduleBootstrapScriptGenerator.BuildScriptContent();
+            string second = GitSubmoduleBootstrapScriptGenerator.BuildScriptContent();
             Assert.That(second, Is.EqualTo(first));
             StringAssert.EndsWith("\r\n", first);
             Assert.That(first.Contains("\n") && !first.Contains("\r\n"), Is.False);

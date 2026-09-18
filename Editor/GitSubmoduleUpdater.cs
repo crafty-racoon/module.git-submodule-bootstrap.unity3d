@@ -82,9 +82,8 @@ namespace CraftyRacoon.GitSubmoduleBootstrap.Editor
         [MenuItem(GenerateRootInitializeScriptMenuPath, priority = 2002)]
         private static void GenerateRootInitializeScript()
         {
-            string unityProjectRelativePath = GitRepositoryLocator.GetRelativeDescendantPath(RepositoryRoot, UnityProjectRoot).Replace('\\', '/');
             string scriptPath = Path.Combine(RepositoryRoot, GitSubmoduleBootstrapScriptGenerator.GeneratedFileName);
-            string generatedContent = GitSubmoduleBootstrapScriptGenerator.BuildScriptContent(unityProjectRelativePath);
+            string generatedContent = GitSubmoduleBootstrapScriptGenerator.BuildScriptContent();
             if (File.Exists(scriptPath))
             {
                 string existingContent = File.ReadAllText(scriptPath);

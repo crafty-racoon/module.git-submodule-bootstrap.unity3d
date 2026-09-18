@@ -1,6 +1,6 @@
 {
   "name": "com.craftyracoon.git-submodule-bootstrap",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "displayName": "Git Submodule Bootstrap",
   "description": "Safely synchronizes Git submodules to the revisions recorded by a Unity project's parent repository.",
   "unity": "6000.0",
