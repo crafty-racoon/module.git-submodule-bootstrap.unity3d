@@ -43,10 +43,13 @@ bootstrapped before Unity can compile project code that depends on submodules.
 
 The generated Windows script is deterministic and root-relative. It verifies
 that Git and `.gitmodules` are available, refuses to run while that Unity
-project is actively open, refuses locally modified `.gitmodules`, and only
-performs a recursive initialization when every top-level submodule is missing.
-An already-initialized repository is a no-op; mixed initialized/missing states
-are rejected and should be handled with the Unity updater or manually.
+project is actively open, refuses locally modified `.gitmodules`, verifies
+that every top-level submodule gitlink in the index still matches the current
+parent `HEAD`, and only performs a recursive initialization when every top-level
+submodule is missing. This makes the generated script restore the submodule
+revisions recorded by the checked-out parent commit rather than a staged pointer.
+An already-initialized repository is a no-op; staged pointer changes and mixed
+initialized/missing states are rejected and should be resolved explicitly.
 
 ## Requirements
 
