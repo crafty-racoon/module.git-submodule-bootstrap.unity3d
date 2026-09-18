@@ -34,6 +34,40 @@ Automatic checks log an actionable warning when blocked. Manual checks at
 full reason list. The per-project automatic check can be toggled at
 **Tools > Git Submodules > Update on Project Open**.
 
+## Repository root convention
+
+The bootstrap belongs to the Git repository, not to a specific Unity project.
+
+Terminology:
+
+- **Repository root**: the nearest ancestor directory that contains the adopting repository's `.git` metadata and `.gitmodules`.
+- **Unity project root**: the directory that contains `Assets/`, `Packages/`, and `ProjectSettings/`.
+
+Rules:
+
+- `Initialize Submodules.cmd` is always generated at the repository root.
+- All Git and submodule commands run with the repository root as their working directory.
+- `.gitmodules` paths and parent gitlink pointers are interpreted relative to the repository root.
+- A Unity project may be located directly at the repository root or in any descendant directory.
+- The generated script records the Unity project path only so it can check that project's `Temp/UnityLockfile` before mutating submodules.
+- Do not copy or move the generated initializer into the Unity project directory. Regenerate it with **Tools > Git Submodules > Generate Root Initialize Script** instead.
+- The generated initializer should be committed with the adopting repository when fresh clones need a pre-Unity bootstrap path.
+
+Example:
+
+```text
+RepositoryRoot/
+├─ .git/
+├─ .gitmodules
+├─ Initialize Submodules.cmd
+└─ NarrativeRuntime/
+   ├─ Assets/
+   ├─ Packages/
+   └─ ProjectSettings/
+```
+
+This convention keeps Git ownership at the superproject boundary while allowing the Unity project layout to change independently.
+
 ## Root initialization script
 
 Use **Tools > Git Submodules > Generate Root Initialize Script** to generate
