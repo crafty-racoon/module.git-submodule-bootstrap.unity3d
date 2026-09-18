@@ -48,8 +48,7 @@ namespace CraftyRacoon.GitSubmoduleBootstrap.Editor
                 "    goto :fail",
                 ")",
                 "",
-
-                "if exist \"" + unityProjectLockPath + "\" ("
+                "if exist \"" + unityProjectLockPath + "\" (",
                 "    where powershell.exe >nul 2>nul",
                 "    if errorlevel 1 (",
                 "        echo [Git Submodules] ERROR: PowerShell is required to verify the Unity project lock.",
