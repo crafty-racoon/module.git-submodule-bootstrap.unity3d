@@ -6,8 +6,10 @@ namespace CraftyRacoon.GitSubmoduleBootstrap.Editor
     {
         internal const string GeneratedFileName = "Initialize Submodules.cmd";
 
-        internal static string BuildScriptContent()
+        internal static string BuildScriptContent(string unityProjectRelativePath)
         {
+            string normalizedUnityProjectRelativePath = string.IsNullOrWhiteSpace(unityProjectRelativePath) ? "." : unityProjectRelativePath.Replace('\\', '/');
+            string unityProjectLockPath = normalizedUnityProjectRelativePath == "." ? "Temp\\UnityLockfile" : normalizedUnityProjectRelativePath.Replace('/', '\\') + "\\Temp\\UnityLockfile";
             string[] lines =
             {
                 "@echo off",
@@ -20,11 +22,12 @@ namespace CraftyRacoon.GitSubmoduleBootstrap.Editor
                 "    exit /b 1",
                 ")",
                 "",
-                "echo [Git Submodules] Project root: %CD%",
+                "echo [Git Submodules] Repository root: %CD%",
                 "echo.",
                 "",
-                "if not exist \"ProjectSettings\\ProjectVersion.txt\" (",
-                "    echo [Git Submodules] ERROR: This script must be located in a Unity project root.",
+                "git rev-parse --show-toplevel >nul 2>nul",
+                "if errorlevel 1 (",
+                "    echo [Git Submodules] ERROR: This script must be located in a Git working tree.",
                 "    goto :fail",
                 ")",
                 "",
@@ -45,20 +48,15 @@ namespace CraftyRacoon.GitSubmoduleBootstrap.Editor
                 "    goto :fail",
                 ")",
                 "",
-                "git rev-parse --show-toplevel >nul 2>nul",
-                "if errorlevel 1 (",
-                "    echo [Git Submodules] ERROR: The project root is not a Git working tree.",
-                "    goto :fail",
-                ")",
-                "",
-                "if exist \"Temp\\UnityLockfile\" (",
+
+                "if exist \"" + unityProjectLockPath + "\" ("
                 "    where powershell.exe >nul 2>nul",
                 "    if errorlevel 1 (",
                 "        echo [Git Submodules] ERROR: PowerShell is required to verify the Unity project lock.",
                 "        goto :fail",
                 "    )",
                 "",
-                "    powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command \"$p = Join-Path (Get-Location) 'Temp\\UnityLockfile'; try { $s = [System.IO.File]::Open($p, [System.IO.FileMode]::Open, [System.IO.FileAccess]::ReadWrite, [System.IO.FileShare]::None); $s.Dispose(); exit 0 } catch { exit 1 }\"",
+                "    powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command \"$p = Join-Path (Get-Location) '" + unityProjectLockPath.Replace("\\", "\\\\") + "'; try { $s = [System.IO.File]::Open($p, [System.IO.FileMode]::Open, [System.IO.FileAccess]::ReadWrite, [System.IO.FileShare]::None); $s.Dispose(); exit 0 } catch { exit 1 }\"",
                 "    if errorlevel 1 (",
                 "        echo [Git Submodules] ERROR: This Unity project is currently open.",
                 "        echo Close Unity completely, then run this script again.",
