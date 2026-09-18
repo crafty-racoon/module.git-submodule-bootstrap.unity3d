@@ -4,6 +4,14 @@ All notable changes to this module are documented in this file.
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-09-18
+
+### Fixed
+
+- Registered the root initialization script menu from the existing `GitSubmoduleUpdater` Editor entry point, so the command appears with the other Git Submodules menu items after package reload.
+- Kept `GitSubmoduleBootstrapScriptGenerator` as a pure script-content generator.
+
+
 ## [0.4.0] - 2026-09-18
 
 ### Added
