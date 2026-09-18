@@ -4,6 +4,13 @@ All notable changes to this module are documented in this file.
 
 ## [Unreleased]
 
+## [0.4.2] - 2026-09-18
+
+### Fixed
+
+- Fixed malformed `.meta` files for the root initialization script generator and its tests so Unity imports the generator source into the Editor assembly correctly.
+
+
 ## [0.4.1] - 2026-09-18
 
 ### Fixed
