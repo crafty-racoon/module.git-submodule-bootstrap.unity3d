@@ -4,6 +4,14 @@ All notable changes to this module are documented in this file.
 
 ## [Unreleased]
 
+## [0.5.2] - 2026-09-18
+
+### Fixed
+
+- `.gitmodules` safety checks now compare against parent `HEAD` while ignoring CR-only line-ending differences, avoiding false blocks on Windows fresh clones.
+- Semantic staged or unstaged `.gitmodules` changes still block initialization and Unity-side updates.
+
+
 ## [0.5.1] - 2026-09-18
 
 ### Fixed
