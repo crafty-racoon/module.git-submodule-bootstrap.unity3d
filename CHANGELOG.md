@@ -4,8 +4,12 @@ All notable changes to this module are documented in this file.
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-09-18
+
 ### Changed
 
+- Restored Unity Package Manager metadata for installation from a Git URL.
+- Updated installation guidance to use `Packages/manifest.json`.
 - Converted the repository from a UPM package to a Unity source module.
 - Replaced the ambiguous `Outdated` state with mismatch relation analysis.
 - Added all-or-nothing preflight protection for dirty, conflicted, ahead, diverged, unknown, staged-gitlink, and locally edited `.gitmodules` states.

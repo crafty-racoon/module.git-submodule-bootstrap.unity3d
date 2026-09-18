@@ -1,34 +1,21 @@
 # Git Submodule Bootstrap
 
-Unity Editor source module that safely synchronizes Git submodules to the
+Unity Editor package that safely synchronizes Git submodules to the
 adopting repository's recorded gitlinks when doing so cannot discard or hide
 local work.
 
-This repository is currently intended for module integration only. Add it as a
-Git submodule at:
+Install it with Unity Package Manager by adding this dependency to the adopting
+project's `Packages/manifest.json`:
 
-```text
-Assets/Modules/module.git-submodule-bootstrap.unity3d
+```json
+"com.craftyracoon.git-submodule-bootstrap": "https://github.com/crafty-racoon/module.git-submodule-bootstrap.unity3d.git"
 ```
 
 ## Fresh clones and the bootstrap boundary
 
-This module cannot initialize itself. Its scripts do not exist in a fresh
-working tree until Git checks out this submodule. Before opening Unity, use one
-of these commands:
-
-```bash
-git clone --recurse-submodules <repository-url>
-```
-
-or, from an existing clone:
-
-```bash
-git submodule update --init Assets/Modules/module.git-submodule-bootstrap.unity3d
-```
-
-After this module is present, opening Unity performs one safety-checked startup
-sync for the remaining submodules.
+Unity Package Manager fetches this package before its Editor scripts run.
+After the package is available, opening Unity performs one safety-checked
+startup sync for the project's Git submodules.
 
 ## Safety model
 
