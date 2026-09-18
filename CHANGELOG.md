@@ -4,6 +4,19 @@ All notable changes to this module are documented in this file.
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-09-18
+
+### Added
+
+- Added repository-root discovery so the Unity project can live below the Git worktree root.
+- Root initialization scripts are now always generated at the Git repository root and carry the Unity project relative path only for active-editor lock detection.
+- Added `package.json.meta` so immutable UPM installations no longer warn that the package manifest has no meta file.
+
+### Changed
+
+- Unity startup/manual submodule synchronization now runs against the resolved Git repository root rather than assuming the Unity project root is the Git root.
+
+
 ## [0.4.3] - 2026-09-18
 
 ### Fixed
