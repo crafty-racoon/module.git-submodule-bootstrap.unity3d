@@ -19,20 +19,24 @@ startup sync for the project's Git submodules.
 
 ## Safety model
 
-- The adopting repository's indexed gitlink is the desired revision.
+The Unity updater and the bootstrap CMD have intentionally different responsibilities.
+
+The Unity updater (**Tools > Git Submodules > Update Now** and the optional startup update) performs the strict repository-state preflight:
+
 - Exact matches are left untouched.
 - Missing submodules may be initialized.
 - A clean checkout may move forward when its current commit is proven to be an ancestor of the recorded gitlink.
-- Dirty, conflicted, ahead, diverged, and unknown states block the entire update.
+- Dirty, conflicted, ahead, diverged, unknown, staged-gitlink, and semantic `.gitmodules` changes block the entire update.
 - No submodule is moved until every relevant submodule passes preflight.
-- Detached commits are never moved backward automatically, including commits without a branch, remote-tracking branch, or tag.
-- Local `.gitmodules` edits and staged parent gitlink changes block the update.
 - The updater never uses force, reset, clean, stash, rebase, or remote tracking.
 
-Automatic checks log an actionable warning when blocked. Manual checks at
-**Tools > Git Submodules > Update Now** use the same safety rules and show the
-full reason list. The per-project automatic check can be toggled at
-**Tools > Git Submodules > Update on Project Open**.
+`Initialize Submodules.cmd` is deliberately simpler. It is a fresh-clone bootstrap, not a Git state manager. It resolves the repository root and runs:
+
+```text
+git submodule update --init --recursive
+```
+
+The CMD does not inspect or repair the parent index, staged gitlinks, dirty submodules, or `.gitmodules` state. If a repository already contains active development changes, use the Unity updater or Git directly instead of treating the bootstrap CMD as a synchronization tool.
 
 ## Repository root convention
 
@@ -49,7 +53,6 @@ Rules:
 - All Git and submodule commands run with the repository root as their working directory.
 - `.gitmodules` paths and parent gitlink pointers are interpreted relative to the repository root.
 - A Unity project may be located directly at the repository root or in any descendant directory.
-- The generated script records the Unity project path only so it can check that project's `Temp/UnityLockfile` before mutating submodules.
 - Do not copy or move the generated initializer into the Unity project directory. Regenerate it with **Tools > Git Submodules > Generate Root Initialize Script** instead.
 - The generated initializer should be committed with the adopting repository when fresh clones need a pre-Unity bootstrap path.
 
@@ -70,22 +73,11 @@ This convention keeps Git ownership at the superproject boundary while allowing 
 
 ## Root initialization script
 
-This repository ships a generic `Initialize Submodules.cmd` at its own Git root. Direct clones or source downloads therefore include a standalone bootstrap script. The generic script has no Unity-project-specific lock path and is safe to use as a repository-root template. When this package is installed through Unity Package Manager, do not run the copy inside `Library/PackageCache`; generate the adopting repository script from Unity instead.
+This repository ships a generic `Initialize Submodules.cmd` at its own Git root, so direct clones or source downloads include the bootstrap script.
 
-Use **Tools > Git Submodules > Generate Root Initialize Script** to generate
-`Initialize Submodules.cmd` in the adopting project's Git repository root.
-Commit that generated file with the adopting project when fresh clones must be
-bootstrapped before Unity can compile project code that depends on submodules.
+Use **Tools > Git Submodules > Generate Root Initialize Script** to generate or replace the same bootstrap at the adopting repository's Git root. The output location is always the resolved Git root, even when the Unity project lives in a nested directory such as `Repo/NarrativeRuntime/`.
 
-The package resolves the nearest Git worktree root above the Unity project. The generated Windows script is always written there, so layouts such as `Repo/NarrativeRuntime/Assets` work without configuration. The script is deterministic and repository-root-relative. It verifies
-that Git and `.gitmodules` are available, refuses to run while that Unity
-project is actively open, refuses locally modified `.gitmodules`, verifies
-that every top-level submodule gitlink in the index still matches the current
-parent `HEAD`, and only performs a recursive initialization when every top-level
-submodule is missing. This makes the generated script restore the submodule
-revisions recorded by the checked-out parent commit rather than a staged pointer.
-An already-initialized repository is a no-op; staged pointer changes and mixed
-initialized/missing states are rejected and should be resolved explicitly.
+The generated script is intentionally small: it verifies Git is available, resolves the repository root, and runs `git submodule update --init --recursive`. Git itself reports checkout/authentication/conflict failures. More restrictive synchronization policy belongs to the Unity updater, not to the bootstrap script.
 
 ## Requirements
 
