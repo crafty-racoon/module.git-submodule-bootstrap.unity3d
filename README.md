@@ -70,6 +70,8 @@ This convention keeps Git ownership at the superproject boundary while allowing 
 
 ## Root initialization script
 
+This repository ships a generic `Initialize Submodules.cmd` at its own Git root. Direct clones or source downloads therefore include a standalone bootstrap script. The generic script has no Unity-project-specific lock path and is safe to use as a repository-root template. When this package is installed through Unity Package Manager, do not run the copy inside `Library/PackageCache`; generate the adopting repository script from Unity instead.
+
 Use **Tools > Git Submodules > Generate Root Initialize Script** to generate
 `Initialize Submodules.cmd` in the adopting project's Git repository root.
 Commit that generated file with the adopting project when fresh clones must be

@@ -27,7 +27,17 @@ namespace CraftyRacoon.GitSubmoduleBootstrap.Editor.Tests
         {
             string script = GitSubmoduleBootstrapScriptGenerator.BuildScriptContent(".");
             StringAssert.Contains("The repository has a mixed submodule state.", script);
-            StringAssert.Contains("findstr /b /c:\" \" /c:\"+\" /c:\"U\"", script);
+            StringAssert.Contains("findstr /b /c:\" \"", script);
+        }
+
+        [Test]
+        public void GeneratedScriptRejectsMismatchedInitializedSubmodulesBeforeNoOp()
+        {
+            string script = GitSubmoduleBootstrapScriptGenerator.BuildScriptContent(".");
+            int mismatchCheckIndex = script.IndexOf("findstr /b /c:\"+\" /c:\"U\"", System.StringComparison.Ordinal);
+            int noMissingIndex = script.IndexOf("No missing top-level submodules were found.", System.StringComparison.Ordinal);
+            Assert.That(mismatchCheckIndex, Is.GreaterThanOrEqualTo(0));
+            Assert.That(noMissingIndex, Is.GreaterThan(mismatchCheckIndex));
         }
 
         [Test]
