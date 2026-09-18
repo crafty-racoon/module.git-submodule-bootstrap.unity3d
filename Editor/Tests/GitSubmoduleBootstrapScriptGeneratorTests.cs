@@ -25,6 +25,15 @@ namespace CraftyRacoon.GitSubmoduleBootstrap.Editor.Tests
         }
 
         [Test]
+        public void GeneratedScriptBlocksWhileGitIndexIsLocked()
+        {
+            string script = GitSubmoduleBootstrapScriptGenerator.BuildScriptContent();
+            StringAssert.Contains("git rev-parse --git-path index.lock", script);
+            StringAssert.Contains("A Git index lock exists.", script);
+            StringAssert.Contains("Wait for clone / checkout / Git LFS to finish", script);
+        }
+
+        [Test]
         public void GeneratedScriptTreatsRepositoryWithoutSubmodulesAsSuccess()
         {
             string script = GitSubmoduleBootstrapScriptGenerator.BuildScriptContent();
