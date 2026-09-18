@@ -1,54 +1,10 @@
 using System;
-using System.IO;
-using System.Text;
-using UnityEditor;
-using UnityEngine;
-using Debug = UnityEngine.Debug;
 
 namespace CraftyRacoon.GitSubmoduleBootstrap.Editor
 {
     internal static class GitSubmoduleBootstrapScriptGenerator
     {
         internal const string GeneratedFileName = "Initialize Submodules.cmd";
-        private const string GenerateMenuPath = "Tools/Git Submodules/Generate Root Initialize Script";
-
-        private static string ProjectRoot => Path.GetFullPath(Path.Combine(Application.dataPath, ".."));
-        private static string GitModulesPath => Path.Combine(ProjectRoot, ".gitmodules");
-        private static string GitMetadataPath => Path.Combine(ProjectRoot, ".git");
-        private static bool IsGitWorkingTree => Directory.Exists(GitMetadataPath) || File.Exists(GitMetadataPath);
-
-        [MenuItem(GenerateMenuPath, priority = 2010)]
-        private static void GenerateRootInitializeScript()
-        {
-            string scriptPath = Path.Combine(ProjectRoot, GeneratedFileName);
-            string generatedContent = BuildScriptContent();
-            if (File.Exists(scriptPath))
-            {
-                string existingContent = File.ReadAllText(scriptPath);
-                if (string.Equals(NormalizeLineEndings(existingContent), NormalizeLineEndings(generatedContent), StringComparison.Ordinal))
-                {
-                    Debug.Log("[Git Submodules] Root initialization script is already up to date: " + scriptPath);
-                    EditorUtility.RevealInFinder(scriptPath);
-                    return;
-                }
-
-                bool replace = EditorUtility.DisplayDialog("Replace root initialization script?", GeneratedFileName + " already exists and differs from the generated version.", "Replace", "Cancel");
-                if (!replace)
-                {
-                    return;
-                }
-            }
-
-            File.WriteAllText(scriptPath, generatedContent, new UTF8Encoding(false));
-            Debug.Log("[Git Submodules] Generated root initialization script: " + scriptPath);
-            EditorUtility.RevealInFinder(scriptPath);
-        }
-
-        [MenuItem(GenerateMenuPath, true)]
-        private static bool ValidateGenerateRootInitializeScript()
-        {
-            return File.Exists(GitModulesPath) && IsGitWorkingTree;
-        }
 
         internal static string BuildScriptContent()
         {
@@ -171,9 +127,5 @@ namespace CraftyRacoon.GitSubmoduleBootstrap.Editor
             return string.Join("\r\n", lines) + "\r\n";
         }
 
-        private static string NormalizeLineEndings(string content)
-        {
-            return content.Replace("\r\n", "\n").Replace('\r', '\n');
-        }
     }
 }
