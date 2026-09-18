@@ -37,11 +37,11 @@ full reason list. The per-project automatic check can be toggled at
 ## Root initialization script
 
 Use **Tools > Git Submodules > Generate Root Initialize Script** to generate
-`Initialize Submodules.cmd` in the adopting Unity project's repository root.
+`Initialize Submodules.cmd` in the adopting project's Git repository root.
 Commit that generated file with the adopting project when fresh clones must be
 bootstrapped before Unity can compile project code that depends on submodules.
 
-The generated Windows script is deterministic and root-relative. It verifies
+The package resolves the nearest Git worktree root above the Unity project. The generated Windows script is always written there, so layouts such as `Repo/NarrativeRuntime/Assets` work without configuration. The script is deterministic and repository-root-relative. It verifies
 that Git and `.gitmodules` are available, refuses to run while that Unity
 project is actively open, refuses locally modified `.gitmodules`, verifies
 that every top-level submodule gitlink in the index still matches the current
