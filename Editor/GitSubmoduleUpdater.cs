@@ -31,9 +31,10 @@ namespace CraftyRacoon.GitSubmoduleBootstrap.Editor
             EditorApplication.quitting += HandleEditorQuitting;
         }
 
-        private static string ProjectRoot => Path.GetFullPath(Path.Combine(Application.dataPath, ".."));
-        private static string GitModulesPath => Path.Combine(ProjectRoot, ".gitmodules");
-        private static string GitMetadataPath => Path.Combine(ProjectRoot, ".git");
+        private static string UnityProjectRoot => Path.GetFullPath(Path.Combine(Application.dataPath, ".."));
+        private static string RepositoryRoot => GitRepositoryLocator.FindRepositoryRoot(UnityProjectRoot);
+        private static string GitModulesPath => string.IsNullOrEmpty(RepositoryRoot) ? string.Empty : Path.Combine(RepositoryRoot, ".gitmodules");
+        private static string GitMetadataPath => string.IsNullOrEmpty(RepositoryRoot) ? string.Empty : Path.Combine(RepositoryRoot, ".git");
         private static string AutoUpdatePreferenceKey => PreferencePrefix + Application.dataPath.Replace('\\', '/');
         private static bool AutoUpdateEnabled => EditorPrefs.GetBool(AutoUpdatePreferenceKey, true);
         private static bool IsGitWorkingTree => Directory.Exists(GitMetadataPath) || File.Exists(GitMetadataPath);
@@ -81,8 +82,9 @@ namespace CraftyRacoon.GitSubmoduleBootstrap.Editor
         [MenuItem(GenerateRootInitializeScriptMenuPath, priority = 2002)]
         private static void GenerateRootInitializeScript()
         {
-            string scriptPath = Path.Combine(ProjectRoot, GitSubmoduleBootstrapScriptGenerator.GeneratedFileName);
-            string generatedContent = GitSubmoduleBootstrapScriptGenerator.BuildScriptContent();
+            string unityProjectRelativePath = GitRepositoryLocator.GetRelativeDescendantPath(RepositoryRoot, UnityProjectRoot).Replace('\\', '/');
+            string scriptPath = Path.Combine(RepositoryRoot, GitSubmoduleBootstrapScriptGenerator.GeneratedFileName);
+            string generatedContent = GitSubmoduleBootstrapScriptGenerator.BuildScriptContent(unityProjectRelativePath);
             if (File.Exists(scriptPath))
             {
                 string existingContent = File.ReadAllText(scriptPath);
@@ -135,11 +137,11 @@ namespace CraftyRacoon.GitSubmoduleBootstrap.Editor
 
             if (!IsGitWorkingTree)
             {
-                Debug.LogWarning("[Git Submodules] " + ProjectRoot + " is not a Git working tree; update skipped.");
+                Debug.LogWarning("[Git Submodules] No Git repository root could be resolved above " + UnityProjectRoot + "; update skipped.");
                 return;
             }
 
-            activeProjectRoot = ProjectRoot;
+            activeProjectRoot = RepositoryRoot;
             activeRequestIsAutomatic = automatic;
             PreflightRequest request = new PreflightRequest(activeProjectRoot);
             preflightTask = Task.Run(request.Execute);
