@@ -4,6 +4,18 @@ All notable changes to this module are documented in this file.
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-09-18
+
+### Added
+
+- Added a checked-in generic `Initialize Submodules.cmd` at the module repository root so direct clones/downloads include a standalone bootstrap script.
+
+### Fixed
+
+- Generated bootstrap scripts now reject initialized top-level submodules whose checked-out commit differs from the parent `HEAD` gitlink instead of treating them as a no-op.
+- Project-aware scripts continue to be generated at the adopting Git repository root, never inside the Unity project directory unless both roots are the same directory.
+
+
 ## [0.5.2] - 2026-09-18
 
 ### Fixed
