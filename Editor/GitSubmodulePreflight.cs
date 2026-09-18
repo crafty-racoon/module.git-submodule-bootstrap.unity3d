@@ -161,14 +161,14 @@ namespace CraftyRacoon.GitSubmoduleBootstrap.Editor
         private List<string> InspectRootRepository(string projectRoot, IReadOnlyList<GitSubmoduleStatusEntry> entries)
         {
             List<string> problems = new List<string>();
-            GitCommandResult modulesStatus = commandRunner.Run(projectRoot, "status", "--porcelain=v1", "--untracked-files=all", "--", ".gitmodules");
-            if (modulesStatus.ExitCode != 0)
+            GitCommandResult modulesStatus = commandRunner.Run(projectRoot, "diff", "--quiet", "--ignore-cr-at-eol", "HEAD", "--", ".gitmodules");
+            if (modulesStatus.ExitCode == 1)
+            {
+                problems.Add(".gitmodules contains semantic staged or unstaged local modifications.");
+            }
+            else if (modulesStatus.ExitCode != 0)
             {
                 problems.Add("Could not verify .gitmodules working-tree state: " + CombineOutput(modulesStatus));
-            }
-            else if (!string.IsNullOrWhiteSpace(modulesStatus.StandardOutput))
-            {
-                problems.Add(".gitmodules contains staged or unstaged local modifications.");
             }
 
             foreach (GitSubmoduleStatusEntry entry in entries)
